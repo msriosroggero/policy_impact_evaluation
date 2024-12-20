@@ -1,84 +1,79 @@
 // Propuesta: Evaluador de Impacto de las Políticas Públicas con Arrays y Métodos de Búsqueda y Filtrado
 
-function calcularRegresionLineal(cantidad_de_anos, ano_inicio) {
-    let transferencias = [];
-    let tasasPobreza = [];
-    let anos = [];
+document.addEventListener('DOMContentLoaded', () => {
+    const generateFieldsBtn = document.getElementById('generate-fields-btn');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const dataForm = document.getElementById('data-form');
+    const dataFieldsContainer = document.getElementById('data-fields');
+    const resultsContainer = document.getElementById('results-container');
+
+    generateFieldsBtn.addEventListener('click', () => {
+        const anoInicio = Number(document.getElementById('ano-inicio').value);
+        const cantidadAnos = Number(document.getElementById('cantidad-anos').value);
+
+        if (anoInicio && cantidadAnos) {
+            dataFieldsContainer.innerHTML = '';
+            for (let i = 0; i < cantidadAnos; i++) {
+                const ano = anoInicio + i;
+                dataFieldsContainer.innerHTML += `
+                    <label for="transferencia-${ano}">Transferencia ${ano}:</label>
+                    <input type="number" id="transferencia-${ano}" name="transferencia-${ano}" required>
+                    <label for="pobreza-${ano}">Tasa de pobreza ${ano}:</label>
+                    <input type="number" id="pobreza-${ano}" name="pobreza-${ano}" required>
+                `;
+            }
+            analyzeBtn.disabled = false;
+        } else {
+            alert('Por favor ingresa valores válidos para el año de inicio y la cantidad de años.');
+        }
+    });
+
+    analyzeBtn.addEventListener('click', () => {
+        const anoInicio = Number(document.getElementById('ano-inicio').value);
+        const cantidadAnos = Number(document.getElementById('cantidad-anos').value);
+        const transferencias = [];
+        const tasasPobreza = [];
+
+        for (let i = 0; i < cantidadAnos; i++) {
+            const ano = anoInicio + i;
+            const transferencia = Number(document.getElementById(`transferencia-${ano}`).value);
+            const pobreza = Number(document.getElementById(`pobreza-${ano}`).value);
+
+            if (isNaN(transferencia) || isNaN(pobreza)) {
+                alert(`Por favor ingresa valores válidos para el año ${ano}.`);
+                return;
+            }
+
+            transferencias.push(transferencia);
+            tasasPobreza.push(pobreza);
+        }
+
+        const { beta0, beta1 } = calcularRegresionLineal(cantidadAnos, anoInicio, transferencias, tasasPobreza);
+        resultsContainer.innerHTML = `
+            <p>β₀ (Constante): ${beta0.toFixed(2)}</p>
+            <p>β₁ (Impacto de transferencia): ${beta1.toFixed(2)}</p>
+            <p>Por cada unidad adicional en las transferencias, la tasa de pobreza disminuiría en aproximadamente ${beta1.toFixed(2)} unidades.</p>
+        `;
+    });
+});
+
+function calcularRegresionLineal(n, anoInicio, transferencias, tasasPobreza) {
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
-    //  Pedirle ingresar los datos históricos al usuario y guardarlos en los arrays
-    for (let i = 0; i < cantidad_de_anos; i++) {
-        let ano_actual = ano_inicio + i;
-        let transferencia = Number(prompt(`Ingrese transferencia del año ${ano_actual}:`));
-        let pobreza = Number(prompt(`Ingrese tasa de pobreza del año ${ano_actual}:`));
-
-        // Guardo los datos en los arrays de transferencia y las tasas de pobreza
-        anos.push(ano_actual);
-        transferencias.push(transferencia);
-        tasasPobreza.push(pobreza);
-
-        // Sumo para los cálculos de los coeficientes de la regresión lineal
-        sumX += transferencia;
-        sumY += pobreza;
-        sumXY += transferencia * pobreza;
-        sumX2 += transferencia * transferencia;
+    for (let i = 0; i < n; i++) {
+        const x = transferencias[i];
+        const y = tasasPobreza[i];
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumX2 += x * x;
     }
 
-    // Cálculo de los coeficientes β0 y β1 (impacto de la constante e impacto de la transferencia)
-    let n = cantidad_de_anos;
-    let beta1 = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    let promedioX = sumX / n;
-    let promedioY = sumY / n;
-    let beta0 = promedioY - beta1 * promedioX;
+    const beta1 = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const promedioX = sumX / n;
+    const promedioY = sumY / n;
+    const beta0 = promedioY - beta1 * promedioX;
 
-    // Retorno los coeficientes y los arrays
-    return { beta0, beta1, anos, transferencias, tasasPobreza };
+    return { beta0, beta1 };
 }
 
-// Encontrar el índice de un año específico
-function buscarAno(anos, transferencias, tasasPobreza, anoBuscado) {
-    return anos
-        .map((ano, index) => ({
-            ano: ano,
-            transferencia: transferencias[index],
-            pobreza: tasasPobreza[index]
-        }))
-        .find(entry => entry.ano === anoBuscado) || "Año no encontrado en los datos.";
-}
-
-
-// Filtrar años con transferencia mayor a cierto valor
-function filtrarTransferenciasAltas(anos, transferencias, tasasPobreza, valorMinimo) {
-    return anos
-        .map((ano, index) => ({
-            ano: ano,
-            transferencia: transferencias[index],
-            pobreza: tasasPobreza[index]
-        }))
-        .filter(entry => entry.transferencia > valorMinimo);
-}
-
-
-// EJECUCIÓN
-
-
-// Ejemplo para que el usuario ingrese los dtos
-let cantidad_de_anos = Number(prompt('Ingrese cantidad de años históricos:'));
-let ano_inicio = Number(prompt('Ingrese el año de inicio:'));
-
-let resultado = calcularRegresionLineal(cantidad_de_anos, ano_inicio);
-console.log(`β0 (constante): ${resultado.beta0}`);
-console.log(`β1 (Impacto de transferencia directo): ${resultado.beta1}`);
-console.log(`Datos de transferencias ingresadas: ${resultado.transferencias}`);
-console.log(`Datos de tasas de pobreza ingresadas: ${resultado.tasasPobreza}`);
-alert(`Dado que el valor de β₁ = ${resultado.beta1}, por cada unidad adicional en las transferencias monetarias directas, la tasa de pobreza disminuiría en ${resultado.beta1} unidades.`);
-
-// Para hacer Búsqueda de valores en la base de datos por año:
-let anoBuscado = Number(prompt("Ingrese el año que desea buscar:"));
-let resultadoBusqueda = buscarAno(resultado.anos, resultado.transferencias, resultado.tasasPobreza, anoBuscado);
-console.log("Resultado de la búsqueda para el año ingresado:", resultadoBusqueda);
-
-// Para realiza búsquedas con de años con valor mínimo de transferencias
-let valorMinimo = Number(prompt("Ingrese el valor mínimo de transferencia para filtrar:"));
-let resultadoFiltrado = filtrarTransferenciasAltas(resultado.anos, resultado.transferencias, resultado.tasasPobreza, valorMinimo);
-console.log("Los años con transferencias mayores a", valorMinimo, ":", resultadoFiltrado);
